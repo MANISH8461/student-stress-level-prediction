@@ -1,131 +1,93 @@
-# import streamlit as st
-# import pandas as pd
-# import joblib
+"""
+app.py
+------
+Flask web app for the Student Stress Level classifier.
+Loads the trained model, scaler, and expected column order,
+and serves a form where a user enters lifestyle details and
+gets a High Stress / Normal Stress prediction.
 
-# model = joblib.load("logisticReg_Student_Stress_Level.pkl")
-# scaler = joblib.load("scaler_studentLogistic_.pkl")
-# expected_columns = joblib.load("columns_studentStress.pkl")
+Run with:
+    python app.py
+Then open http://127.0.0.1:5000 in your browser.
+"""
 
-
-# st.title("Student Stress Prediction by Manish")
-# st.markdown("Provide the following details.")
-
-# studentType = st.selectbox("Student Type", ["School", "College", "Working Student"])
-# sleepHours = st.slider("Sleep Hours", 2.02, 9.98)
-# studyHours = st.slider("Study Hours", -1.43, 21.97)
-# socialMediaHours = st.slider("Social Media Hours", 3.99, 9.96)
-# attendance = st.slider("Attendance", -5.0, 120.0)
-# examPressure = st.slider("Exam Pressure", 1, 10)
-# familySupport = st.slider("Family Support", 1.0, 10.0, 1.0)
-# month = st.slider("Month", 1, 12,1)
-
-
-
-# if st.button("Predict"):
-#     raw_input = {
-#         'Student Type' +  studentType : 1,
-#         "Sleep Hours": sleepHours,
-#         'Study Hours': studyHours,
-#         'Social Media Hours': socialMediaHours,
-#         'Attendance': attendance,
-#         'Exam Pressure': examPressure,
-#         'Family Support': familySupport,
-#         'Month': month,
-#     }
-
-#     input_df = pd.DataFrame([raw_input])
-
-#     for col in expected_columns:
-#         if col not in input_df.columns:
-#             input_df[col] = 0
-
-#     input_df = input_df[expected_columns]
-
-#     scaled_input = scaler.transfom(input_df)
-#     prediction = model.prediction(scaled_input)[0]
-
-#     if prediction == 1:
-#         st.error("High Stress Level")
-#     else:
-#         st.success("Normal Stress Level")
-
-
-
-
-
-
-
-import streamlit as st
+from flask import Flask, render_template, request
 import pandas as pd
 import joblib
+import os
 
+app = Flask(__name__)
+
+# ---------------------------------------------------------
+# Load the trained model, scaler, and expected columns once, at startup
+# ---------------------------------------------------------
 model = joblib.load("logisticReg_Student_Stress_Level.pkl")
 scaler = joblib.load("scaler_studentLogistic_.pkl")
 expected_columns = joblib.load("columns_studentStress.pkl")
 
-
-st.title("Student Stress Prediction by Manish")
-st.markdown("Provide the following details.")
-
-studentType = st.selectbox("Student Type", ["School", "College", "Working Student"])
-sleepHours = st.slider("Sleep Hours", 2.02, 9.98)
-studyHours = st.slider("Study Hours", -1.43, 21.97)
-socialMediaHours = st.slider("Social Media Hours", 3.99, 9.96)
-attendance = st.slider("Attendance", -5.0, 120.0)
-examPressure = st.slider("Exam Pressure", 1, 10)
-familySupport = st.slider("Family Support", 1.0, 10.0, 1.0)
-month = st.slider("Month", 1, 12, 1)
+STUDENT_TYPES = ["School", "College", "Working Student"]
+STUDENT_TYPE_MAP = {"School": 0, "College": 1, "Working Student": 2}
 
 
-# if st.button("Predict"):
-#     raw_input = {
-#         "Sleep Hours": sleepHours,
-#         "Study Hours": studyHours,
-#         "Social Media Hours": socialMediaHours,
-#         "Attendance": attendance,
-#         "Exam Pressure": examPressure,
-#         "Family Support": familySupport,
-#         "Month": month,
-#         "Student Type_" + studentType: 1,   # fixed: underscore separator to match training column names
-#     }
+@app.route("/", methods=["GET", "POST"])
+def home():
+    prediction = None
+    error = None
 
-#     input_df = pd.DataFrame([raw_input])
+    if request.method == "POST":
+        try:
+            student_type = request.form["studentType"]
+            sleep_hours = float(request.form["sleepHours"])
+            study_hours = float(request.form["studyHours"])
+            social_media_hours = float(request.form["socialMediaHours"])
+            attendance = float(request.form["attendance"])
+            exam_pressure = float(request.form["examPressure"])
+            family_support = float(request.form["familySupport"])
+            month = int(request.form["month"])
 
-#     for col in expected_columns:
-#         if col not in input_df.columns:
-#             input_df[col] = 0
+            raw_input = {
+                "Sleep_Hours": sleep_hours,
+                "Study_Hours": study_hours,
+                "Social_Media_Hours": social_media_hours,
+                "Attendance": attendance,
+                "Exam_Pressure": exam_pressure,
+                "Family_Support": family_support,
+                "Month": month,
+                "Student_Type": STUDENT_TYPE_MAP[student_type],
+            }
 
-#     input_df = input_df[expected_columns]
+            input_df = pd.DataFrame([raw_input])
 
-#     scaled_input = scaler.transform(input_df)          # fixed: transfom -> transform
-#     prediction = model.predict(scaled_input)[0]          # fixed: prediction -> predict
+            # Fill any expected column not present in raw_input with 0
+            for col in expected_columns:
+                input_df = input_df[expected_columns]
+                if col not in input_df.columns:
+                    input_df[col] = 0
 
-#     if prediction == 1:
-#         st.error("High Stress Level")
-#     else:
-#         st.success("Normal Stress Level")
+            # Reorder to match training column order exactly
+            scaled_input = scaler.transform(input_df)
+            result = model.predict(scaled_input)[0]
+            probabilities = model.predict_proba(scaled_input)[0]
 
-if st.button("Predict"):
-    student_type_map = {"School": 0, "College": 1, "Working Student": 2}  # verify order from training notebook
+            print("Input DataFrame:\n", input_df)
+            print("Scaled Input:\n", scaled_input)
+            print("Prediction:", result)
+            print("Probabilities:", probabilities)
 
-    raw_input = {
-        "Student_Type": student_type_map[studentType],
-        "Sleep_Hours": sleepHours,
-        "Study_Hours": studyHours,
-        "Social_Media_Hours": socialMediaHours,
-        "Attendance": attendance,
-        "Exam_Pressure": examPressure,
-        "Family_Support": familySupport,
-        "Month": month,
-    }
+            prediction = "🚨 High Stress Level" if result == 1 else "✅ Normal Stress Level"
 
-    input_df = pd.DataFrame([raw_input])
-    input_df = input_df[expected_columns]
+        except Exception as e:
+            error = f"Invalid input: {e}"
 
-    scaled_input = scaler.transform(input_df)
-    prediction = model.predict(scaled_input)[0]
+    return render_template(
+        "index.html",
+        student_types=STUDENT_TYPES,
+        prediction=prediction,
+        error=error,
+    )
 
-    if prediction == 1:
-        st.error("High Stress Level")
-    else:
-        st.success("Normal Stress Level")
+
+if __name__ == "__main__":
+    # debug=True only for local testing — Render runs this via gunicorn (see Procfile)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(debug=True, host="0.0.0.0", port=port)

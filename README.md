@@ -1,8 +1,12 @@
 # Student Stress Level Prediction 🎓
 
-A Streamlit web app that predicts whether a student is experiencing **High Stress** or **Normal Stress** based on lifestyle and academic factors, using a **Logistic Regression** model.
+A Flask web app that predicts whether a student is experiencing **High Stress** or **Normal Stress** based on lifestyle and academic factors, using a **Logistic Regression** model.
 
-🔗 **Live App:** [student-stress-level-prediction](https://student-stress-level-prediction-e3z4gtasvaqp5nfjwm9mpm.streamlit.app)
+🔗 **Live App:** [Add your Render URL here after deployment]
+
+> **Note:** This app runs on Render's free tier, which "sleeps" after ~15
+> minutes of inactivity. The first request after sleeping can take 30-50
+> seconds to wake up — this is normal, not a bug.
 
 ---
 
@@ -20,11 +24,13 @@ This app takes in details about a student's daily routine — sleep, study hours
 
 | File | Description |
 |---|---|
-| `app.py` | Streamlit application (UI + prediction logic) |
+| `app.py` | Flask application (routes + prediction logic) |
+| `templates/index.html` | HTML form (UI), rendered by Flask |
 | `logisticReg_Student_Stress_Level.pkl` | Trained Logistic Regression model |
 | `scaler_studentLogistic_.pkl` | StandardScaler fitted on training data |
 | `columns_studentStress.pkl` | Expected feature column order for the model |
 | `requirements.txt` | Python dependencies |
+| `Procfile` | Tells Render how to run the app with Gunicorn |
 
 ## ⚙️ Input Features
 
@@ -41,52 +47,80 @@ This app takes in details about a student's daily routine — sleep, study hours
 
 ## 🚀 Run Locally
 
-```bash
-git clone https://github.com/MANISH8461/student-stress-level-prediction.git
-cd student-stress-level-prediction
-pip install -r requirements.txt
-streamlit run app.py
-```
+1. Clone this repository:
+   ```bash
+   git clone https://github.com/MANISH8461/student-stress-level-prediction.git
+   cd student-stress-level-prediction
+   ```
+
+2. Create a virtual environment and activate it:
+   ```bash
+   python -m venv venv
+   venv\Scripts\activate      # Windows
+   source venv/bin/activate   # macOS/Linux
+   ```
+
+3. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. Run the app:
+   ```bash
+   python app.py
+   ```
+
+5. Open **http://127.0.0.1:5000** in your browser, fill in the form, and get a prediction.
+
+## 🌐 Deploying to Render (free live link)
+
+1. Push this project to GitHub (including the `.pkl` model files, `Procfile`, and `requirements.txt`).
+2. Go to [render.com](https://render.com) and sign up (free tier is fine).
+3. Click **New → Web Service**, connect your GitHub account, and select this repo.
+4. Fill in the settings:
+   - **Runtime:** Python 3
+   - **Build Command:** `pip install -r requirements.txt`
+   - **Start Command:** `gunicorn app:app`
+   - **Instance Type:** Free
+5. Click **Create Web Service**. Render installs dependencies and gives you a live URL like `https://your-app-name.onrender.com`.
 
 ## 🖥️ Code Overview
 
 ```python
-# Load the trained model, scaler, and expected column order
+# Load the trained model, scaler, and expected column order once, at startup
 model = joblib.load("logisticReg_Student_Stress_Level.pkl")
 scaler = joblib.load("scaler_studentLogistic_.pkl")
 expected_columns = joblib.load("columns_studentStress.pkl")
 
-# Collect user input via Streamlit widgets (sliders, selectbox)
-# ...
+@app.route("/", methods=["GET", "POST"])
+def home():
+    if request.method == "POST":
+        # Collect form input and build a single-row DataFrame
+        raw_input = {...}
+        input_df = pd.DataFrame([raw_input])
 
-if st.button("Predict"):
-    # Build a single-row DataFrame from user input
-    raw_input = {...}
-    input_df = pd.DataFrame([raw_input])
+        # Reorder columns to match training order exactly
+        input_df = input_df[expected_columns]
 
-    # Ensure all expected columns exist, fill missing ones with 0
-    for col in expected_columns:
-        if col not in input_df.columns:
-            input_df[col] = 0
+        # Scale input the same way training data was scaled
+        scaled_input = scaler.transform(input_df)
 
-    # Reorder columns to match training order exactly
-    input_df = input_df[expected_columns]
+        # Predict and display result
+        prediction = model.predict(scaled_input)[0]
+        result = "High Stress Level" if prediction == 1 else "Normal Stress Level"
 
-    # Scale input the same way training data was scaled
-    scaled_input = scaler.transform(input_df)
-
-    # Predict and display result
-    prediction = model.predict(scaled_input)[0]
-    st.error("High Stress Level") if prediction == 1 else st.success("Normal Stress Level")
+    return render_template("index.html", prediction=result)
 ```
 
 ## 🛠️ Tech Stack
 
 - Python
-- Streamlit
+- Flask
 - scikit-learn
 - pandas
 - joblib
+- Gunicorn (production server)
+- Bootstrap 5 (frontend styling)
 
 ## 👤 Author
 

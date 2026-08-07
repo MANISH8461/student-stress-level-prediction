@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Stress Prediction</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">Student Stress Prediction</a>
+        </div>
+    </nav>
+
+    <div class="container mt-4" style="max-width: 550px;">
+        <h2 class="mb-1">Student Stress Prediction</h2>
+        <p class="text-muted mb-4">Provide the following details.</p>
+
+        {% if error %}
+            <div class="alert alert-danger" role="alert">
+                {{ error }}
+            </div>
+        {% endif %}
+
+        <form method="POST">
+            <div class="mb-3">
+                <label for="studentType" class="form-label">Student Type</label>
+                <select class="form-select" id="studentType" name="studentType" required>
+                    {% for type in student_types %}
+                        <option value="{{ type }}">{{ type }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label for="sleepHours" class="form-label">Sleep Hours</label>
+                <input type="number" step="any" min="2.02" max="9.98" class="form-control" id="sleepHours" name="sleepHours" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="studyHours" class="form-label">Study Hours</label>
+                <input type="number" step="any" min="-1.43" max="21.97" class="form-control" id="studyHours" name="studyHours" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="socialMediaHours" class="form-label">Social Media Hours</label>
+                <input type="number" step="any" min="3.99" max="9.96" class="form-control" id="socialMediaHours" name="socialMediaHours" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="attendance" class="form-label">Attendance (%)</label>
+                <input type="number" step="any" min="-5.0" max="120.0" class="form-control" id="attendance" name="attendance" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="examPressure" class="form-label">Exam Pressure (1-10)</label>
+                <input type="number" step="1" min="1" max="10" class="form-control" id="examPressure" name="examPressure" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="familySupport" class="form-label">Family Support (1-10)</label>
+                <input type="number" step="any" min="1.0" max="10.0" class="form-control" id="familySupport" name="familySupport" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="month" class="form-label">Month (1-12)</label>
+                <input type="number" step="1" min="1" max="12" class="form-control" id="month" name="month" required>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Predict</button>
+        </form>
+
+        {% if prediction %}
+        <div class="alert {% if 'High' in prediction %}alert-danger{% else %}alert-success{% endif %} mt-4" role="alert">
+            <h4 class="mb-0">{{ prediction }}</h4>
+        </div>
+        {% endif %}
+    </div>
+
+</body>
+</html>
