@@ -2,7 +2,7 @@
 
 A Flask web app that predicts whether a student is experiencing **High Stress** or **Normal Stress** based on lifestyle and academic factors, using a **Logistic Regression** model.
 
-🔗 **Live App:** [Add your Render URL here after deployment]
+🔗 **Live App:** [Try it live here](https://student-stress-flask.onrender.com)
 
 > **Note:** This app runs on Render's free tier, which "sleeps" after ~15
 > minutes of inactivity. The first request after sleeping can take 30-50
