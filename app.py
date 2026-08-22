@@ -2,9 +2,9 @@
 app.py
 ------
 Flask web app for the Student Stress Level classifier.
-Loads the trained model, scaler, and expected column order,
-and serves a form where a user enters lifestyle details and
-gets a High Stress / Normal Stress prediction.
+Loads the trained model, scaler, expected column order, and Student_Type
+encoder, and serves a form where a user enters lifestyle details and gets a
+High Stress / Normal Stress prediction.
 
 Run with:
     python app.py
@@ -19,14 +19,16 @@ import os
 app = Flask(__name__)
 
 # ---------------------------------------------------------
-# Load the trained model, scaler, and expected columns once, at startup
+# Load the trained model, scaler, expected columns, and encoder once, at startup.
+# All four artifacts must come from the same training run — see case-study.md
+# Bug 5 for why mixing artifacts from different runs caused problems before.
 # ---------------------------------------------------------
 model = joblib.load("logisticReg_Student_Stress_Level.pkl")
 scaler = joblib.load("scaler_studentLogistic_.pkl")
 expected_columns = joblib.load("columns_studentStress.pkl")
+student_type_encoder = joblib.load("studentType_encoder.pkl")
 
 STUDENT_TYPES = ["School", "College", "Working Student"]
-STUDENT_TYPE_MAP = {"School": 0, "College": 1, "Working Student": 2}
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -45,6 +47,12 @@ def home():
             family_support = float(request.form["familySupport"])
             month = int(request.form["month"])
 
+            # Encoder was fit on lowercase, underscore-separated strings
+            # (e.g. "working_student"). Normalize form values to match.
+            encoded_student_type = student_type_encoder.transform(
+                [student_type.lower().replace(" ", "_")]
+            )[0]
+
             raw_input = {
                 "Sleep_Hours": sleep_hours,
                 "Study_Hours": study_hours,
@@ -53,18 +61,12 @@ def home():
                 "Exam_Pressure": exam_pressure,
                 "Family_Support": family_support,
                 "Month": month,
-                "Student_Type": STUDENT_TYPE_MAP[student_type],
+                "Student_Type": encoded_student_type,
             }
 
             input_df = pd.DataFrame([raw_input])
+            input_df = input_df[expected_columns]  # match training column order
 
-            # Fill any expected column not present in raw_input with 0
-            for col in expected_columns:
-                input_df = input_df[expected_columns]
-                if col not in input_df.columns:
-                    input_df[col] = 0
-
-            # Reorder to match training column order exactly
             scaled_input = scaler.transform(input_df)
             result = model.predict(scaled_input)[0]
             probabilities = model.predict_proba(scaled_input)[0]
