@@ -34,6 +34,7 @@ STUDENT_TYPES = ["School", "College", "Working Student"]
 @app.route("/", methods=["GET", "POST"])
 def home():
     prediction = None
+    confidence = None
     error = None
 
     if request.method == "POST":
