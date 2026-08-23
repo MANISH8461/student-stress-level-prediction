@@ -77,7 +77,7 @@ def home():
             print("Probabilities:", probabilities)
 
             prediction = "🚨 High Stress Level" if result == 1 else "✅ Normal Stress Level"
-
+            confidence = round(max(probabilities) * 100, 1)  # confidence in the predicted class
         except Exception as e:
             error = f"Invalid input: {e}"
 
@@ -85,6 +85,7 @@ def home():
         "index.html",
         student_types=STUDENT_TYPES,
         prediction=prediction,
+        confidence=confidence,
         error=error,
     )
 

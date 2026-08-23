@@ -21,9 +21,9 @@
         <p class="text-muted mb-4">Provide the following details.</p>
 
         {% if error %}
-            <div class="alert alert-danger" role="alert">
-                {{ error }}
-            </div>
+        <div class="alert alert-danger" role="alert">
+            {{ error }}
+        </div>
         {% endif %}
 
         <form method="POST">
@@ -31,39 +31,45 @@
                 <label for="studentType" class="form-label">Student Type</label>
                 <select class="form-select" id="studentType" name="studentType" required>
                     {% for type in student_types %}
-                        <option value="{{ type }}">{{ type }}</option>
+                    <option value="{{ type }}">{{ type }}</option>
                     {% endfor %}
                 </select>
             </div>
 
             <div class="mb-3">
                 <label for="sleepHours" class="form-label">Sleep Hours</label>
-                <input type="number" step="any" min="2.02" max="9.98" class="form-control" id="sleepHours" name="sleepHours" required>
+                <input type="number" step="any" min="2.02" max="9.98" class="form-control" id="sleepHours"
+                    name="sleepHours" required>
             </div>
 
             <div class="mb-3">
                 <label for="studyHours" class="form-label">Study Hours</label>
-                <input type="number" step="any" min="0" max="21.97" class="form-control" id="studyHours" name="studyHours" required>
+                <input type="number" step="any" min="0" max="21.97" class="form-control" id="studyHours"
+                    name="studyHours" required>
             </div>
 
             <div class="mb-3">
                 <label for="socialMediaHours" class="form-label">Social Media Hours</label>
-                <input type="number" step="any" min="3.99" max="9.96" class="form-control" id="socialMediaHours" name="socialMediaHours" required>
+                <input type="number" step="any" min="3.99" max="9.96" class="form-control" id="socialMediaHours"
+                    name="socialMediaHours" required>
             </div>
 
             <div class="mb-3">
                 <label for="attendance" class="form-label">Attendance (%)</label>
-                <input type="number" step="any" min="0" max="120.0" class="form-control" id="attendance" name="attendance" required>
+                <input type="number" step="any" min="0" max="120.0" class="form-control" id="attendance"
+                    name="attendance" required>
             </div>
 
             <div class="mb-3">
                 <label for="examPressure" class="form-label">Exam Pressure (1-10)</label>
-                <input type="number" step="1" min="1" max="10" class="form-control" id="examPressure" name="examPressure" required>
+                <input type="number" step="1" min="1" max="10" class="form-control" id="examPressure"
+                    name="examPressure" required>
             </div>
 
             <div class="mb-3">
                 <label for="familySupport" class="form-label">Family Support (1-10)</label>
-                <input type="number" step="any" min="1.0" max="10.0" class="form-control" id="familySupport" name="familySupport" required>
+                <input type="number" step="any" min="1.0" max="10.0" class="form-control" id="familySupport"
+                    name="familySupport" required>
             </div>
 
             <div class="mb-3">
@@ -75,11 +81,18 @@
         </form>
 
         {% if prediction %}
-        <div class="alert {% if 'High' in prediction %}alert-danger{% else %}alert-success{% endif %} mt-4" role="alert">
+        <div class="alert {% if 'High' in prediction %}alert-danger{% else %}alert-success{% endif %} mt-4"
+            role="alert">
             <h4 class="mb-0">{{ prediction }}</h4>
+            <p class="mb-0 mt-2">Model confidence: {{ confidence }}%</p>
+            {% if 'High' in prediction %}
+            <small class="text-muted">Note: this model's High Stress flag has ~63% precision — about 1 in 3 flags are
+                false positives.</small>
+            {% endif %}
         </div>
         {% endif %}
     </div>
 
 </body>
+
 </html>
