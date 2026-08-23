@@ -5,7 +5,6 @@ or **Normal Stress** based on lifestyle and academic factors, using a
 **Logistic Regression** model.
 
 🔗 **Live App:** [Try it live here](https://student-stress-flask.onrender.com)
-*(redeploy required after the fixes below — see Deployment note)*
 
 > **Note:** This app runs on Render's free tier, which "sleeps" after ~15
 > minutes of inactivity. The first request after sleeping can take 30-50
@@ -50,9 +49,10 @@ Decision Tree, SVM, Random Forest, XGBoost) via `GridSearchCV(cv=5,
 scoring='f1')` inside proper `Pipeline`s (scaler refit per fold, no leakage).
 Four models — Random Forest, SVM, Logistic Regression, XGBoost — scored within
 0.0023 F1 of each other on cross-validation, a gap smaller than run-to-run
-noise. Logistic Regression was selected from that tie for its native
-calibrated `predict_proba`, lower serving cost, and directly interpretable
-coefficients — not because it had the single highest score. See
+noise. Logistic Regression was selected from that tie — not because it had
+the single highest score, but for its native calibrated `predict_proba`
+(now surfaced to the user as a confidence score alongside every prediction),
+lower serving cost, and directly interpretable coefficients. See
 `case-study.md` for the full comparison table.
 
 ### Known limitations
@@ -69,6 +69,11 @@ coefficients — not because it had the single highest score. See
   rates by type (school 20.5%, college 31.3%, working student 38.2%) — it
   appears to be a proxy for other included features rather than an
   independent predictor.
+- **Displayed confidence is model-internal calibration, not measured
+  real-world accuracy.** A "High Stress — 82% confidence" result still
+  carries the same 63% precision ceiling — roughly 1 in 3 High Stress flags
+  are false positives regardless of the displayed confidence number. The UI
+  shows this disclaimer inline whenever a High Stress result is shown.
 
 ## 📂 Project Files
 
@@ -100,30 +105,30 @@ coefficients — not because it had the single highest score. See
 ## 🚀 Run Locally
 
 1. Clone this repository:
-   ```bash
+```bash
    git clone https://github.com/MANISH8461/student-stress-level-prediction.git
    cd student-stress-level-prediction
-   ```
+```
 
 2. Create a virtual environment and activate it:
-   ```bash
+```bash
    python -m venv venv
    venv\Scripts\activate      # Windows
    source venv/bin/activate   # macOS/Linux
-   ```
+```
 
 3. Install dependencies:
-   ```bash
+```bash
    pip install -r requirements.txt
-   ```
+```
 
 4. Run the app:
-   ```bash
+```bash
    python app.py
-   ```
+```
 
 5. Open **http://127.0.0.1:5000** in your browser, fill in the form, and get a
-   prediction.
+   prediction with a confidence score.
 
 ## 🌐 Deploying to Render (free live link)
 
@@ -140,11 +145,16 @@ coefficients — not because it had the single highest score. See
 5. Click **Create Web Service**. Render installs dependencies and gives you a
    live URL like `https://your-app-name.onrender.com`.
 
-> **⚠️ Redeploy note:** if you had a previous live deployment, it was built
-> from a model with a `Student_Type` encoding mismatch (see `case-study.md`,
-> Bug 2) — School and College were silently swapped for every prediction. The
-> currently deployed model needs to be replaced with the artifacts produced
-> after the Bug 2–8 fixes before the live link reflects correct behavior.
+> **Verification notes:**
+> - The Student_Type encoding fix (case-study.md, Bug 2) was confirmed
+>   directly against Render's server logs — encoded values match the expected
+>   LabelEncoder mapping, and prediction probabilities shift only marginally
+>   (~0.2%) across Student_Type when all other inputs are held constant,
+>   consistent with the model's near-zero Student_Type coefficient.
+> - `prediction`, `confidence`, and `error` must be initialized to `None`
+>   before the `try` block in `app.py`. Without this, a plain `GET`/`HEAD`
+>   request (e.g. Render's own health checks) throws `UnboundLocalError`
+>   because those variables are never assigned outside the `POST` branch.
 
 ## 🖥️ Code Overview
 
@@ -157,27 +167,45 @@ student_type_encoder = joblib.load("studentType_encoder.pkl")
 
 @app.route("/", methods=["GET", "POST"])
 def home():
+    # Must be initialized here, not just inside the try block — a GET/HEAD
+    # request never enters the POST branch, and render_template() below
+    # needs all three defined regardless of request method.
+    prediction = None
+    confidence = None
+    error = None
+
     if request.method == "POST":
-        raw_input = {
-            "Sleep_Hours": sleep_hours,
-            "Study_Hours": study_hours,
-            "Social_Media_Hours": social_media_hours,
-            "Attendance": attendance,
-            "Exam_Pressure": exam_pressure,
-            "Family_Support": family_support,
-            "Month": month,
-            "Student_Type": student_type_encoder.transform(
+        try:
+            encoded_student_type = student_type_encoder.transform(
                 [student_type.lower().replace(" ", "_")]
-            )[0],
-        }
-        input_df = pd.DataFrame([raw_input])
-        input_df = input_df[expected_columns]  # match training column order
+            )[0]
+            raw_input = {
+                "Sleep_Hours": sleep_hours,
+                "Study_Hours": study_hours,
+                "Social_Media_Hours": social_media_hours,
+                "Attendance": attendance,
+                "Exam_Pressure": exam_pressure,
+                "Family_Support": family_support,
+                "Month": month,
+                "Student_Type": encoded_student_type,
+            }
+            input_df = pd.DataFrame([raw_input])[expected_columns]
+            scaled_input = scaler.transform(input_df)
 
-        scaled_input = scaler.transform(input_df)
-        prediction = model.predict(scaled_input)[0]
-        result = "High Stress Level" if prediction == 1 else "Normal Stress Level"
+            result = model.predict(scaled_input)[0]
+            probabilities = model.predict_proba(scaled_input)[0]
+            confidence = round(max(probabilities) * 100, 1)  # confidence in predicted class
 
-    return render_template("index.html", prediction=result)
+            prediction = "🚨 High Stress Level" if result == 1 else "✅ Normal Stress Level"
+        except Exception as e:
+            error = f"Invalid input: {e}"
+
+    return render_template(
+        "index.html",
+        prediction=prediction,
+        confidence=confidence,
+        error=error,
+    )
 ```
 
 ## 🛠️ Tech Stack
